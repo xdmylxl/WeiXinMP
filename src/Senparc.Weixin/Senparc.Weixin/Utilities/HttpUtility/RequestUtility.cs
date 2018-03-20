@@ -58,7 +58,7 @@ using System.Web;
 using System.Net.Http;
 using System.Net.Http.Headers;
 #endif
-#if NETSTANDARD1_6 || NETSTANDARD2_0 || NETCOREAPP2_0
+#if NETSTANDARD1_6 || NETSTANDARD2_0 || NETCOREAPP2_0 || NETCOREAPP2_1
 using Microsoft.AspNetCore.Http;
 using Senparc.Weixin.WebProxy;
 #endif
@@ -71,6 +71,13 @@ namespace Senparc.Weixin.HttpUtility
     /// </summary>
     public static partial class RequestUtility
     {
+#if NETCOREAPP2_1
+        private static HttpClient httpClient;
+        public static void Configure(SenparcHttpClient senparcHttpClient)
+        {
+            httpClient = senparcHttpClient.HttpClient;
+        }
+#endif
         #region 代理
 
 #if NET35 || NET40 || NET45
@@ -208,13 +215,17 @@ namespace Senparc.Weixin.HttpUtility
         /// <summary>
         /// 设置HTTP头
         /// </summary>
-        /// <param name="request"></param>
+        /// <param name="client"></param>
         /// <param name="refererUrl"></param>
         /// <param name="useAjax">是否使用Ajax</param>
         /// <param name="timeOut"></param>
-        private static void HttpClientHeader(HttpRequestMessage request, string refererUrl, bool useAjax, int timeOut)
+        private static void HttpClientHeader(HttpClient client, string refererUrl, bool useAjax, int timeOut)
         {
-            request.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml", 0.9));
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/webp"));
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.8));
 
             //HttpContent hc = new StringContent(null);
             //HttpContentHeader(hc, timeOut);
@@ -225,18 +236,18 @@ namespace Senparc.Weixin.HttpUtility
 
             //httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"));
 
-            request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
-            request.Headers.Add("Timeout", timeOut.ToString());
-            request.Headers.Add("Connection", "keep-alive");
+            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
+            client.DefaultRequestHeaders.Add("Timeout", timeOut.ToString());
+            client.DefaultRequestHeaders.Add("KeepAlive", "true");
 
             if (!string.IsNullOrEmpty(refererUrl))
             {
-                request.Headers.Add("Referer", refererUrl);
+                client.DefaultRequestHeaders.Referrer = new Uri(refererUrl);
             }
 
             if (useAjax)
             {
-                request.Headers.Add("X-Requested-With", "XMLHttpRequest");
+                client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
             }
         }
 
